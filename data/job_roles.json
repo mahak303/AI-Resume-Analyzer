@@ -1,0 +1,333 @@
+{
+  "roles": {
+    "Python Developer": {
+      "description": "Builds backend systems, APIs, and automation tools using Python.",
+      "required_skills": {
+        "Python": 10,
+        "Django": 8,
+        "Flask": 7,
+        "FastAPI": 7,
+        "REST API": 9,
+        "Git": 8,
+        "PostgreSQL": 7,
+        "MySQL": 6,
+        "Linux": 6,
+        "Unit Testing": 6,
+        "pytest": 6,
+        "Docker": 5
+      },
+      "preferred_skills": {
+        "Redis": 4,
+        "Celery": 4,
+        "AWS": 5,
+        "Microservices": 5,
+        "GraphQL": 4,
+        "Kubernetes": 3
+      },
+      "keywords": [
+        "python", "backend", "api", "django", "flask", "fastapi",
+        "rest", "database", "server", "scripting", "automation"
+      ]
+    },
+
+    "Java Developer": {
+      "description": "Develops enterprise-grade applications and services using Java.",
+      "required_skills": {
+        "Java": 10,
+        "Spring Boot": 9,
+        "REST API": 8,
+        "MySQL": 7,
+        "PostgreSQL": 6,
+        "Git": 8,
+        "Maven": 6,
+        "JUnit": 6,
+        "Docker": 5,
+        "Linux": 5
+      },
+      "preferred_skills": {
+        "Kubernetes": 4,
+        "Kafka": 5,
+        "Microservices": 6,
+        "AWS": 5,
+        "Redis": 4,
+        "Hibernate": 5
+      },
+      "keywords": [
+        "java", "spring", "enterprise", "backend", "microservices",
+        "api", "maven", "gradle", "jvm", "object oriented"
+      ]
+    },
+
+    "Data Analyst": {
+      "description": "Analyzes data to generate business insights and reports.",
+      "required_skills": {
+        "Python": 8,
+        "SQL": 9,
+        "Excel": 8,
+        "Pandas": 8,
+        "NumPy": 7,
+        "Data Visualization": 8,
+        "Tableau": 7,
+        "Power BI": 7,
+        "Statistical Analysis": 8,
+        "Exploratory Data Analysis": 8
+      },
+      "preferred_skills": {
+        "Matplotlib": 5,
+        "Seaborn": 5,
+        "PostgreSQL": 5,
+        "MySQL": 5,
+        "Plotly": 4,
+        "R": 4,
+        "A/B Testing": 5,
+        "BigQuery": 4
+      },
+      "keywords": [
+        "data analysis", "sql", "reporting", "dashboard", "kpi",
+        "insights", "visualization", "excel", "pivot", "metrics",
+        "business intelligence", "analytics"
+      ]
+    },
+
+    "Data Scientist": {
+      "description": "Builds predictive models and extracts insights from large datasets.",
+      "required_skills": {
+        "Python": 9,
+        "Machine Learning": 9,
+        "Scikit-learn": 8,
+        "Pandas": 8,
+        "NumPy": 8,
+        "Statistical Analysis": 8,
+        "Feature Engineering": 8,
+        "Data Visualization": 7,
+        "Jupyter Notebook": 7,
+        "SQL": 7
+      },
+      "preferred_skills": {
+        "TensorFlow": 6,
+        "PyTorch": 6,
+        "Deep Learning": 6,
+        "XGBoost": 6,
+        "Time Series Analysis": 5,
+        "A/B Testing": 5,
+        "AWS": 4,
+        "Tableau": 4,
+        "Spark": 4
+      },
+      "keywords": [
+        "machine learning", "predictive modeling", "data science",
+        "statistics", "model", "training", "evaluation", "dataset",
+        "regression", "classification", "clustering"
+      ]
+    },
+
+    "Machine Learning Engineer": {
+      "description": "Designs, trains, and deploys machine learning models at scale.",
+      "required_skills": {
+        "Python": 9,
+        "Machine Learning": 10,
+        "Deep Learning": 8,
+        "TensorFlow": 8,
+        "PyTorch": 8,
+        "Scikit-learn": 7,
+        "Feature Engineering": 8,
+        "Model Evaluation": 8,
+        "Docker": 7,
+        "Git": 7
+      },
+      "preferred_skills": {
+        "Kubernetes": 5,
+        "MLflow": 6,
+        "AWS": 6,
+        "SageMaker": 6,
+        "Apache Spark": 5,
+        "Kafka": 4,
+        "CI/CD": 5,
+        "Hyperparameter Tuning": 6
+      },
+      "keywords": [
+        "machine learning", "ml pipeline", "model training", "deployment",
+        "inference", "feature store", "mlops", "neural network",
+        "experiment tracking", "model serving"
+      ]
+    },
+
+    "AI Engineer": {
+      "description": "Builds AI-powered applications using LLMs, NLP, and modern AI tooling.",
+      "required_skills": {
+        "Python": 9,
+        "Natural Language Processing": 9,
+        "Large Language Models": 9,
+        "Prompt Engineering": 8,
+        "LangChain": 7,
+        "OpenAI API": 7,
+        "Hugging Face": 7,
+        "REST API": 7,
+        "Machine Learning": 7,
+        "Git": 7
+      },
+      "preferred_skills": {
+        "FastAPI": 5,
+        "Docker": 6,
+        "Vector Databases": 6,
+        "Retrieval Augmented Generation": 7,
+        "spaCy": 5,
+        "Fine Tuning": 6,
+        "AWS": 5,
+        "PyTorch": 6
+      },
+      "keywords": [
+        "llm", "generative ai", "chatbot", "nlp", "text generation",
+        "embeddings", "rag", "fine tuning", "ai application",
+        "language model", "prompt", "inference"
+      ]
+    },
+
+    "Backend Developer": {
+      "description": "Designs and builds server-side logic, databases, and APIs.",
+      "required_skills": {
+        "Python": 8,
+        "REST API": 9,
+        "SQL": 8,
+        "Git": 8,
+        "Docker": 7,
+        "Linux": 6,
+        "PostgreSQL": 7,
+        "MongoDB": 6,
+        "Microservices": 6,
+        "Authentication": 6
+      },
+      "preferred_skills": {
+        "Redis": 5,
+        "Kafka": 4,
+        "Kubernetes": 4,
+        "AWS": 5,
+        "GraphQL": 5,
+        "CI/CD": 5
+      },
+      "keywords": [
+        "backend", "server", "api", "database", "authentication",
+        "authorization", "scalability", "performance", "microservices",
+        "rest", "json", "sql"
+      ]
+    },
+
+    "Frontend Developer": {
+      "description": "Builds user-facing web interfaces using modern JavaScript frameworks.",
+      "required_skills": {
+        "JavaScript": 9,
+        "React": 9,
+        "TypeScript": 7,
+        "HTML": 8,
+        "CSS": 8,
+        "Git": 8,
+        "REST API": 7,
+        "Responsive Design": 7,
+        "Node.js": 6
+      },
+      "preferred_skills": {
+        "Next.js": 6,
+        "Vue.js": 5,
+        "Angular": 5,
+        "Figma": 5,
+        "Jest": 5,
+        "Webpack": 4,
+        "Redux": 5
+      },
+      "keywords": [
+        "frontend", "ui", "ux", "web", "javascript", "react",
+        "components", "responsive", "browser", "dom", "css", "html"
+      ]
+    },
+
+    "Full Stack Developer": {
+      "description": "Works across both frontend and backend to build complete web applications.",
+      "required_skills": {
+        "JavaScript": 8,
+        "React": 8,
+        "Node.js": 8,
+        "Python": 7,
+        "REST API": 9,
+        "SQL": 7,
+        "MongoDB": 6,
+        "Git": 8,
+        "Docker": 6,
+        "CSS": 6
+      },
+      "preferred_skills": {
+        "TypeScript": 5,
+        "Next.js": 5,
+        "PostgreSQL": 5,
+        "AWS": 5,
+        "Redis": 4,
+        "CI/CD": 5,
+        "GraphQL": 4
+      },
+      "keywords": [
+        "full stack", "frontend", "backend", "web development",
+        "api", "database", "deployment", "javascript", "python",
+        "end to end", "mvc"
+      ]
+    },
+
+    "DevOps Engineer": {
+      "description": "Manages infrastructure, automation pipelines, and deployment workflows.",
+      "required_skills": {
+        "Docker": 9,
+        "Kubernetes": 9,
+        "CI/CD": 9,
+        "Linux": 9,
+        "Bash": 8,
+        "Terraform": 7,
+        "AWS": 8,
+        "Git": 8,
+        "Ansible": 6,
+        "Nginx": 6
+      },
+      "preferred_skills": {
+        "Prometheus": 5,
+        "Grafana": 5,
+        "Jenkins": 6,
+        "GitHub Actions": 6,
+        "Python": 5,
+        "Helm": 5,
+        "GCP": 4
+      },
+      "keywords": [
+        "devops", "infrastructure", "automation", "pipeline", "deployment",
+        "ci/cd", "containerization", "cloud", "monitoring", "reliability",
+        "scalability", "iac"
+      ]
+    },
+
+    "Cybersecurity Analyst": {
+      "description": "Identifies vulnerabilities and protects systems from threats.",
+      "required_skills": {
+        "Network Security": 9,
+        "Linux": 8,
+        "Python": 7,
+        "Penetration Testing": 8,
+        "SIEM": 7,
+        "Vulnerability Assessment": 9,
+        "Incident Response": 8,
+        "Firewalls": 7,
+        "Authentication": 7,
+        "Cryptography": 6
+      },
+      "preferred_skills": {
+        "Kali Linux": 6,
+        "Wireshark": 6,
+        "Nmap": 5,
+        "Metasploit": 5,
+        "OWASP": 6,
+        "Cloud Security": 6,
+        "Docker": 4
+      },
+      "keywords": [
+        "cybersecurity", "security", "threat", "vulnerability", "attack",
+        "defense", "firewall", "encryption", "compliance", "risk",
+        "malware", "forensics", "soc"
+      ]
+    }
+  }
+}
