@@ -1,5 +1,238 @@
 {
   "roles": {
+    "Software Engineering Intern": {
+  "description": "Works on software development tasks under mentorship while building strong programming fundamentals.",
+  "required_skills": {
+    "Java": 9,
+    "Python": 8,
+    "Data Structures": 9,
+    "Algorithms": 9,
+    "Object Oriented Programming": 8,
+    "Git": 7,
+    "SQL": 7,
+    "Problem Solving": 9
+  },
+  "preferred_skills": {
+    "GitHub": 5,
+    "REST API": 5,
+    "HTML": 4,
+    "CSS": 4,
+    "JavaScript": 4,
+    "Linux": 4,
+    "Docker": 3
+  },
+  "keywords": [
+    "internship",
+    "software",
+    "java",
+    "python",
+    "coding",
+    "algorithms",
+    "data structures",
+    "oop",
+    "development",
+    "problem solving",
+    "git",
+    "sql"
+  ]
+},
+    "Entry-Level Software Developer": {
+  "description": "Develops software applications while strengthening backend and programming skills.",
+  "required_skills": {
+    "Java": 9,
+    "Python": 8,
+    "Object Oriented Programming": 8,
+    "SQL": 8,
+    "Git": 7,
+    "REST API": 7,
+    "Problem Solving": 8,
+    "Data Structures": 8
+  },
+  "preferred_skills": {
+    "Spring Boot": 5,
+    "Django": 5,
+    "Docker": 4,
+    "Linux": 4,
+    "GitHub": 4,
+    "MySQL": 4
+  },
+  "keywords": [
+    "software developer",
+    "backend",
+    "coding",
+    "java",
+    "python",
+    "sql",
+    "oop",
+    "api",
+    "development",
+    "git"
+  ]
+},
+    "AI/ML Intern": {
+  "description": "Builds basic machine learning models and data-driven applications while learning modern AI techniques.",
+  "required_skills": {
+    "Python": 10,
+    "Machine Learning": 9,
+    "Pandas": 8,
+    "NumPy": 8,
+    "Scikit-learn": 8,
+    "SQL": 7,
+    "Git": 7,
+    "Jupyter Notebook": 7
+  },
+  "preferred_skills": {
+    "TensorFlow": 5,
+    "PyTorch": 5,
+    "Streamlit": 5,
+    "Data Visualization": 5,
+    "Statistics": 5,
+    "Hugging Face": 4
+  },
+  "keywords": [
+    "machine learning",
+    "python",
+    "internship",
+    "ai",
+    "data",
+    "pandas",
+    "numpy",
+    "scikit learn",
+    "jupyter",
+    "models",
+    "classification",
+    "regression"
+  ]
+},
+    "Data Analyst Intern": {
+  "description": "Analyzes datasets and creates dashboards to generate meaningful business insights.",
+  "required_skills": {
+    "SQL": 9,
+    "Excel": 9,
+    "Python": 8,
+    "Pandas": 8,
+    "NumPy": 7,
+    "Data Visualization": 8,
+    "Statistical Analysis": 7
+  },
+  "preferred_skills": {
+    "Power BI": 5,
+    "Tableau": 5,
+    "Matplotlib": 5,
+    "Seaborn": 5,
+    "PostgreSQL": 4
+  },
+  "keywords": [
+    "data",
+    "analytics",
+    "excel",
+    "sql",
+    "dashboard",
+    "python",
+    "reporting",
+    "business",
+    "visualization",
+    "insights"
+  ]
+},
+    "Generative AI Engineer": {
+  "description": "Develops AI applications using LLMs, prompt engineering, RAG pipelines, and modern AI frameworks.",
+  "required_skills": {
+    "Python": 10,
+    "Large Language Models": 10,
+    "Prompt Engineering": 9,
+    "LangChain": 8,
+    "OpenAI API": 8,
+    "Hugging Face": 8,
+    "Git": 7,
+    "REST API": 7
+  },
+  "preferred_skills": {
+    "Vector Databases": 6,
+    "Retrieval Augmented Generation": 7,
+    "Docker": 5,
+    "FastAPI": 5,
+    "Streamlit": 5,
+    "PyTorch": 5
+  },
+  "keywords": [
+    "llm",
+    "generative ai",
+    "chatbot",
+    "prompt engineering",
+    "langchain",
+    "rag",
+    "vector database",
+    "embeddings",
+    "hugging face",
+    "openai",
+    "ai"
+  ]
+},
+    "NLP Engineer": {
+  "description": "Builds natural language processing systems for text understanding and language models.",
+  "required_skills": {
+    "Python": 9,
+    "Natural Language Processing": 10,
+    "spaCy": 8,
+    "Machine Learning": 8,
+    "Scikit-learn": 7,
+    "Git": 7,
+    "SQL": 6
+  },
+  "preferred_skills": {
+    "Hugging Face": 6,
+    "PyTorch": 6,
+    "Transformers": 6,
+    "NLTK": 5,
+    "Deep Learning": 5,
+    "FastAPI": 4
+  },
+  "keywords": [
+    "nlp",
+    "text",
+    "language",
+    "spacy",
+    "nltk",
+    "transformers",
+    "bert",
+    "hugging face",
+    "python",
+    "tokenization"
+  ]
+},
+    "Computer Vision Engineer": {
+  "description": "Develops AI solutions for image processing, object detection, and visual recognition.",
+  "required_skills": {
+    "Python": 9,
+    "Computer Vision": 10,
+    "OpenCV": 9,
+    "Machine Learning": 8,
+    "Deep Learning": 8,
+    "PyTorch": 7,
+    "Git": 7
+  },
+  "preferred_skills": {
+    "TensorFlow": 6,
+    "YOLO": 6,
+    "CNN": 6,
+    "Image Processing": 6,
+    "Docker": 4,
+    "FastAPI": 4
+  },
+  "keywords": [
+    "computer vision",
+    "opencv",
+    "image processing",
+    "cnn",
+    "yolo",
+    "object detection",
+    "segmentation",
+    "python",
+    "deep learning",
+    "vision"
+  ]
+},
     "Python Developer": {
       "description": "Builds backend systems, APIs, and automation tools using Python.",
       "required_skills": {
