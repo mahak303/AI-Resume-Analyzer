@@ -1,4 +1,5 @@
 """
+─────────────
 ATS (Applicant Tracking System) scoring engine for the AI Resume Analyzer.
 
 What is an ATS score?
@@ -141,9 +142,11 @@ def _score_skills_match(
 
     Returns:
         A tuple of:
-          - normalised_score : float between 0.0 and 100.0
-          - matched_required : list of required skill names that were found
-          - missing_required : list of required skill names that were NOT found
+          - normalised_score  : float between 0.0 and 100.0
+          - matched_required  : list of required skill names that were found
+          - missing_required  : list of required skill names that were NOT found
+          - matched_preferred : list of preferred skill names that were found
+          - missing_preferred : list of preferred skill names that were NOT found
     """
     # Normalise to lowercase sets for case-insensitive comparison
     detected_lower = {s.lower() for s in detected_skills}
@@ -163,12 +166,17 @@ def _score_skills_match(
             missing_required.append(skill)
 
     # Tally bonus points from preferred skills (half weight each)
-    earned_preferred = 0
-    max_preferred    = sum(preferred_skills.values())
+    earned_preferred   = 0
+    max_preferred      = sum(preferred_skills.values())
+    matched_preferred: list[str] = []
+    missing_preferred: list[str] = []
 
     for skill, weight in preferred_skills.items():
         if skill.lower() in detected_lower:
             earned_preferred += weight * 0.5   # preferred = half credit
+            matched_preferred.append(skill)
+        else:
+            missing_preferred.append(skill)
 
     # Maximum possible score = all required + all preferred at half weight
     max_total = max_required + (max_preferred * 0.5)
@@ -183,7 +191,7 @@ def _score_skills_match(
         "Skills match: %.1f/100 | matched=%d required, missing=%d required",
         normalised_score, len(matched_required), len(missing_required),
     )
-    return normalised_score, matched_required, missing_required
+    return normalised_score, matched_required, missing_required, matched_preferred, missing_preferred
 
 
 # ── Sub-scorer 2: Section Completeness (20%) ──────────────────────────────────
@@ -619,7 +627,7 @@ def calculate_ats_score(
 
     # ── Run all six sub-scorers ────────────────────────────────────────────
 
-    skills_score, matched_required, missing_required = _score_skills_match(
+    skills_score, matched_required, missing_required, matched_preferred, missing_preferred = _score_skills_match(
         detected_skills, required_skills, preferred_skills
     )
 
@@ -684,17 +692,36 @@ def calculate_ats_score(
     # Cap missing_skills list so the UI is not overwhelmed
     capped_missing = missing_required[:MAX_MISSING_SKILLS_SHOWN]
 
+    # ── Role Match Percentage ──────────────────────────────────────────────
+    # Match % is distinct from ATS score — it answers only one question:
+    # "What fraction of this role's required skills does the resume cover?"
+    # ATS score is broader (sections, contact, length, keywords, impact).
+    total_required = len(required_skills)
+    match_percentage = (
+        int(round((len(matched_required) / total_required) * 100))
+        if total_required > 0
+        else 0
+    )
+
     logger.info(
-        "ATS score for '%s': %d/100 (%s) | strengths=%d | missing=%d | suggestions=%d",
-        job_role, ats_score, _get_grade(ats_score),
+        "ATS score for '%s': %d/100 (%s) | match: %d%% | strengths=%d | missing=%d | suggestions=%d",
+        job_role, ats_score, _get_grade(ats_score), match_percentage,
         len(strengths), len(capped_missing), len(suggestions),
     )
 
     return {
-        "ats_score"      : ats_score,
-        "grade"          : _get_grade(ats_score),
-        "strengths"      : strengths,
-        "missing_skills" : capped_missing,
-        "suggestions"    : suggestions,
-        "breakdown"      : breakdown,
+        "ats_score"         : ats_score,
+        "grade"             : _get_grade(ats_score),
+        "match_percentage"  : match_percentage,
+        "strengths"         : strengths,
+        "missing_skills"    : capped_missing,
+        "suggestions"       : suggestions,
+        "breakdown"         : breakdown,
+        # Skill detail — used by job match section in app.py
+        "matched_required"  : matched_required,
+        "missing_required"  : missing_required,
+        "matched_preferred" : matched_preferred,
+        "missing_preferred" : missing_preferred,
+        "total_required"    : total_required,
+        "total_preferred"   : len(preferred_skills),
     }

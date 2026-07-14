@@ -1,6 +1,5 @@
 """
-app.py
-──────
+
 Main entry point for the AI Resume Analyzer Streamlit application.
 
 Phase 4 Part 2 — integrates the ATS scoring engine.
@@ -114,7 +113,7 @@ def render_sidebar() -> None:
             1. Select a target job role
             2. Upload your resume (PDF or DOCX)
             3. Click **Analyze Resume**
-            4. Review your ATS score and feedback
+            4. Review your ATS score, role match %, and feedback
             """
         )
 
@@ -230,7 +229,122 @@ def render_extracted_text(resume_text: str, file_name: str) -> None:
         )
 
 
-# ── ATS Score Display ─────────────────────────────────────────────────────────
+# ── Job Role Match Section ────────────────────────────────────────────────────
+
+def render_job_match_section(ats_result: dict, job_role: str) -> None:
+    """
+    Render the job role match percentage and preferred skills analysis.
+
+    This section is distinct from the ATS score:
+      - ATS Score   = how well the resume is formatted and written overall
+      - Match %     = what fraction of THIS role's required skills are present
+
+    Displays:
+      - Match percentage metric
+      - Skill summary (required/preferred matched vs missing)
+      - Preferred skills found / missing
+
+    Args:
+        ats_result : Dictionary returned by calculate_ats_score().
+        job_role   : Selected job role name string.
+    """
+    match_pct        = ats_result["match_percentage"]
+    matched_required = ats_result["matched_required"]
+    missing_required = ats_result["missing_required"]
+    matched_preferred = ats_result["matched_preferred"]
+    missing_preferred = ats_result["missing_preferred"]
+    total_required   = ats_result["total_required"]
+    total_preferred  = ats_result["total_preferred"]
+
+    st.markdown("---")
+    st.header(f"🎯 Role Match — {job_role}")
+
+    # ── Match percentage + skill summary metrics ───────────────────────────
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    match_color = _get_score_color(match_pct)
+    col1.markdown(
+        f"<h2 style='color:{match_color}; margin:0'>{match_pct}%</h2>"
+        f"<p style='color:grey; font-size:0.8rem; margin:0'>Role Match</p>",
+        unsafe_allow_html=True,
+    )
+    col2.metric(
+        label="Required Matched",
+        value=f"{len(matched_required)} / {total_required}",
+        help="Required skills found in your resume vs total required for this role.",
+    )
+    col3.metric(
+        label="Required Missing",
+        value=len(missing_required),
+        help="Required skills not found in your resume.",
+        delta=f"-{len(missing_required)}" if missing_required else None,
+        delta_color="inverse",
+    )
+    col4.metric(
+        label="Preferred Matched",
+        value=f"{len(matched_preferred)} / {total_preferred}",
+        help="Preferred (bonus) skills found in your resume.",
+    )
+    col5.metric(
+        label="Preferred Missing",
+        value=len(missing_preferred),
+        help="Preferred skills not found — not penalised, but good to add.",
+    )
+
+    st.markdown("")
+
+    # ── Preferred skills breakdown ─────────────────────────────────────────
+    st.subheader("Preferred Skills Analysis")
+    st.caption(
+        "Preferred skills are not required but strengthen your application. "
+        "They are not penalised if missing."
+    )
+
+    pref_col1, pref_col2 = st.columns(2)
+
+    with pref_col1:
+        st.markdown("**✓ Preferred Skills Found**")
+        if matched_preferred:
+            for skill in sorted(matched_preferred):
+                st.markdown(f"✅ `{skill}`")
+        else:
+            st.info("No preferred skills detected.")
+
+    with pref_col2:
+        st.markdown("**✗ Preferred Skills Missing**")
+        if missing_preferred:
+            for skill in sorted(missing_preferred):
+                st.markdown(f"➕ `{skill}`")
+        else:
+            st.success("All preferred skills are present!")
+
+    # ── Required skills detail in expander ────────────────────────────────
+    with st.expander("📋 Required Skills Detail", expanded=False):
+        req_col1, req_col2 = st.columns(2)
+
+        with req_col1:
+            st.markdown("**✓ Required Skills Found**")
+            if matched_required:
+                for skill in sorted(matched_required):
+                    st.markdown(f"✅ `{skill}`")
+            else:
+                st.warning("No required skills detected.")
+
+        with req_col2:
+            st.markdown("**✗ Required Skills Missing**")
+            if missing_required:
+                for skill in sorted(missing_required):
+                    st.markdown(f"❌ `{skill}`")
+            else:
+                st.success("All required skills are present!")
+
+    logger.debug(
+        "Job match rendered — match: %d%% | req matched: %d | pref matched: %d",
+        match_pct, len(matched_required), len(matched_preferred),
+    )
+
+
+
 
 def _get_score_color(score: int) -> str:
     """
@@ -562,7 +676,7 @@ def run_analysis(uploaded_file, job_role: str) -> None:
     if skill_results is None:
         return
 
-    all_skills = get_all_skills(resume_text)
+    all_skills = skill_results["all_skills"]
 
     # Step 4 — Calculate ATS score
     ats_result = _calculate_ats_with_spinner(resume_text, all_skills, job_role)
@@ -572,17 +686,21 @@ def run_analysis(uploaded_file, job_role: str) -> None:
     # Step 5 — Render ATS results
     render_ats_score(ats_result, job_role)
 
-    # Step 6 — Render skill results
+    # Step 6 — Render job role match + preferred skills
+    render_job_match_section(ats_result, job_role)
+
+    # Step 7 — Render skill results
     render_skills_summary(skill_results)
     if skill_results["all_skills"]:
         render_skills_by_category(skill_results["by_category"])
         render_all_skills_flat(skill_results["all_skills"])
 
     logger.info(
-        "Analysis complete — %s | role: %s | score: %d | skills: %d",
+        "Analysis complete — %s | role: %s | score: %d | match: %d%% | skills: %d",
         uploaded_file.name,
         job_role,
         ats_result["ats_score"],
+        ats_result["match_percentage"],
         len(all_skills),
     )
 

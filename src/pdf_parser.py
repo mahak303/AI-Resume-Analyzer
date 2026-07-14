@@ -1,6 +1,4 @@
 """
-pdf_parser.py
-─────────────
 Handles reading resume files (PDF and DOCX) and extracting clean text from them.
 
 This module does two things:

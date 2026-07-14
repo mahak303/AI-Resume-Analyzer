@@ -1,5 +1,4 @@
 """
-config.py
 ─────────
 Central configuration for AI Resume Analyzer.
 All constants, weights, thresholds, and file paths live here.

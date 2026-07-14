@@ -1,5 +1,4 @@
 """
-skill_extractor.py
 ──────────────────
 Extracts skills from resume text by matching against our skills database (skills.csv).
 
