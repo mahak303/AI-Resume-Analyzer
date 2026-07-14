@@ -3,38 +3,42 @@ app.py
 ──────
 Main entry point for the AI Resume Analyzer Streamlit application.
 
-This is the first working version of the app (Phase 4).
-It covers:
+Phase 4 Part 2 — integrates the ATS scoring engine.
+Covers:
+  - Job role selection via dropdown (loaded dynamically from job_roles.json)
   - Resume file upload (PDF / DOCX)
-  - Text extraction via pdf_parser.extract_text()
-  - Skill extraction via skill_extractor.extract_skills()
-  - Display of extracted text, skill counts, skills by category,
-    and a flat skill list
+  - Text extraction  → pdf_parser.extract_text()
+  - Skill extraction → skill_extractor.extract_skills()
+  - ATS scoring      → ats_scorer.calculate_ats_score()
+  - Display of: ATS score, grade, strengths, missing skills,
+                suggestions, and per-category score breakdown
 
 Run with:
     streamlit run app.py
 """
 
+import json
 import logging
+
 import streamlit as st
 
 from config import (
-    APP_TITLE,
-    APP_ICON,
     APP_DESCRIPTION,
-    PAGE_LAYOUT,
-    SIDEBAR_STATE,
+    APP_ICON,
+    APP_TITLE,
     ALLOWED_FILE_TYPES,
+    JOB_ROLES_JSON_PATH,
     MAX_FILE_SIZE_MB,
+    PAGE_LAYOUT,
+    SCORE_COLORS,
+    SIDEBAR_STATE,
 )
+from src.ats_score import calculate_ats_score
 from src.pdf_parser import extract_text, get_file_info
-from src.skill_extractor import extract_skills
-
+from src.skill_extractor import extract_skills, get_all_skills
 
 # ── Logging Configuration ─────────────────────────────────────────────────────
-# Configure logging once at the top of the entry point.
-# All modules (pdf_parser, skill_extractor) use getLogger(__name__),
-# so their messages will flow through this root configuration.
+# Configured once here at the entry point; all src/ modules inherit this.
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,6 +48,39 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# ── Job Roles Loader ──────────────────────────────────────────────────────────
+
+@st.cache_data
+def load_job_roles() -> list[str]:
+    """
+    Load available job role names from job_roles.json.
+
+    Decorated with @st.cache_data so the file is only read once per
+    Streamlit session, not on every re-run.
+
+    Returns:
+        Sorted list of job role name strings.
+
+    Raises:
+        RuntimeError: If the file cannot be found or parsed.
+    """
+    try:
+        with open(JOB_ROLES_JSON_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        roles = sorted(data["roles"].keys())
+        logger.info("Loaded %d job roles from job_roles.json", len(roles))
+        return roles
+    except FileNotFoundError:
+        logger.error("job_roles.json not found at: %s", JOB_ROLES_JSON_PATH)
+        raise RuntimeError(
+            "job_roles.json not found. "
+            "Make sure the data/ folder exists and contains job_roles.json."
+        )
+    except (json.JSONDecodeError, KeyError) as e:
+        logger.error("Failed to parse job_roles.json: %s", str(e))
+        raise RuntimeError(f"Could not read job roles: {e}")
+
+
 # ── Page Configuration ────────────────────────────────────────────────────────
 
 def configure_page() -> None:
@@ -51,7 +88,7 @@ def configure_page() -> None:
     Set Streamlit page metadata and layout.
 
     Must be the very first Streamlit call in the script.
-    Values come from config.py so they never need to be changed here.
+    All values come from config.py.
     """
     st.set_page_config(
         page_title=APP_TITLE,
@@ -65,10 +102,7 @@ def configure_page() -> None:
 
 def render_sidebar() -> None:
     """
-    Render the left sidebar with app information and usage instructions.
-
-    Keeping sidebar content in its own function makes it easy to update
-    without touching the main page layout.
+    Render the left sidebar with usage instructions and app metadata.
     """
     with st.sidebar:
         st.title(f"{APP_ICON} {APP_TITLE}")
@@ -77,174 +111,88 @@ def render_sidebar() -> None:
         st.markdown("### How to use")
         st.markdown(
             """
-            1. Upload your resume (PDF or DOCX)
-            2. Wait for text and skill extraction
-            3. Review detected skills by category
+            1. Select a target job role
+            2. Upload your resume (PDF or DOCX)
+            3. Click **Analyze Resume**
+            4. Review your ATS score and feedback
             """
         )
 
         st.markdown("---")
-
         st.markdown("### Supported formats")
         for fmt in ALLOWED_FILE_TYPES:
             st.markdown(f"- `.{fmt.upper()}`")
-
         st.markdown(f"**Max file size:** {MAX_FILE_SIZE_MB} MB")
 
         st.markdown("---")
+        st.markdown("### ATS Score Guide")
+        st.markdown("🟢 **85–100** Excellent")
+        st.markdown("🟡 **70–84**  Good")
+        st.markdown("🟠 **50–69**  Fair")
+        st.markdown("🔴 **0–49**   Needs Work")
+
+        st.markdown("---")
         st.caption("Built with Python · Streamlit · spaCy")
+
+
+# ── Job Role Selector ─────────────────────────────────────────────────────────
+
+def render_job_role_selector(job_roles: list[str]) -> str:
+    """
+    Render a selectbox for the user to choose a target job role.
+
+    The list of roles is loaded dynamically from job_roles.json
+    so adding a new role to the JSON file automatically appears here.
+
+    Args:
+        job_roles: Sorted list of available job role name strings.
+
+    Returns:
+        The selected job role name string.
+    """
+    st.header("① Select a Target Job Role")
+    st.markdown(
+        "Choose the role you are applying for. "
+        "The ATS score will be calculated against that role's requirements."
+    )
+
+    selected_role = st.selectbox(
+        label="Target job role",
+        options=job_roles,
+        index=0,
+        help="Your resume will be scored against the skills required for this role.",
+        label_visibility="collapsed",
+    )
+
+    logger.debug("User selected job role: %s", selected_role)
+    return selected_role
 
 
 # ── File Upload Section ───────────────────────────────────────────────────────
 
 def render_upload_section() -> object:
     """
-    Render the file upload widget and return the uploaded file object.
+    Render the resume file upload widget.
 
     Returns:
-        The uploaded file object from st.file_uploader,
-        or None if no file has been uploaded yet.
+        Streamlit uploaded file object, or None if no file uploaded yet.
     """
-    st.header("Upload Your Resume")
+    st.header("② Upload Your Resume")
     st.markdown(APP_DESCRIPTION)
-    st.markdown("")  # Spacing
 
     uploaded_file = st.file_uploader(
         label="Choose a PDF or DOCX file",
-        type=ALLOWED_FILE_TYPES,           # Streamlit enforces allowed types in the dialog
+        type=ALLOWED_FILE_TYPES,
         help=f"Maximum file size: {MAX_FILE_SIZE_MB} MB",
     )
-
     return uploaded_file
-
-
-# ── Extracted Text Section ────────────────────────────────────────────────────
-
-def render_extracted_text(resume_text: str, file_name: str) -> None:
-    """
-    Display the extracted resume text inside a collapsible expander.
-
-    Showing the raw text lets the user verify that extraction worked
-    correctly before trusting the analysis results.
-
-    Args:
-        resume_text : The cleaned text extracted from the resume.
-        file_name   : Original file name, shown in the expander label.
-    """
-    char_count = len(resume_text)
-    word_count = len(resume_text.split())
-
-    with st.expander(f"📄 Extracted Text from `{file_name}`", expanded=False):
-        # Show basic stats above the raw text
-        col1, col2 = st.columns(2)
-        col1.metric("Characters", f"{char_count:,}")
-        col2.metric("Words", f"{word_count:,}")
-
-        st.markdown("---")
-        # Display raw text in a fixed-height scrollable area
-        st.text_area(
-            label="Raw extracted text",
-            value=resume_text,
-            height=300,
-            disabled=True,          # Read-only — user should not edit this
-            label_visibility="collapsed",
-        )
-
-
-# ── Skills Summary Section ────────────────────────────────────────────────────
-
-def render_skills_summary(skill_results: dict) -> None:
-    """
-    Display a top-level summary of how many skills were detected.
-
-    Args:
-        skill_results: The dictionary returned by extract_skills(),
-                       with keys "all_skills" and "by_category".
-    """
-    all_skills      = skill_results["all_skills"]
-    by_category     = skill_results["by_category"]
-    total_skills    = len(all_skills)
-    total_categories = len(by_category)
-
-    st.markdown("---")
-    st.header("🔍 Skill Detection Results")
-
-    # Top-level metric cards
-    col1, col2 = st.columns(2)
-    col1.metric(
-        label="Total Skills Detected",
-        value=total_skills,
-        help="Number of unique skills found in your resume",
-    )
-    col2.metric(
-        label="Skill Categories",
-        value=total_categories,
-        help="Number of distinct skill categories represented",
-    )
-
-    if total_skills == 0:
-        st.warning(
-            "⚠️ No skills were detected in this resume. "
-            "Make sure your resume contains a dedicated skills section "
-            "and uses standard skill names."
-        )
-
-
-# ── Skills by Category Section ────────────────────────────────────────────────
-
-def render_skills_by_category(by_category: dict[str, list]) -> None:
-    """
-    Display detected skills grouped by their category.
-
-    Each category is shown as a labelled section with skill tags (badges).
-    Categories are sorted alphabetically for consistency.
-
-    Args:
-        by_category: Dict mapping category name → list of skill name strings.
-    """
-    if not by_category:
-        return
-
-    st.subheader("Skills by Category")
-
-    # Sort categories alphabetically so the order is consistent across runs
-    for category in sorted(by_category.keys()):
-        skills_in_category = by_category[category]
-
-        # Format each skill as a small inline badge using markdown
-        # st.markdown renders these as bold inline text separated by gaps
-        badges = "  ".join([f"`{skill}`" for skill in sorted(skills_in_category)])
-
-        st.markdown(f"**{category}** ({len(skills_in_category)})")
-        st.markdown(badges)
-        st.markdown("")   # Small visual gap between categories
-
-
-# ── Flat Skills List Section ──────────────────────────────────────────────────
-
-def render_all_skills_flat(all_skills: list[str]) -> None:
-    """
-    Display all detected skills as a single flat sorted list inside an expander.
-
-    This gives the user a quick copy-paste reference of every skill found.
-
-    Args:
-        all_skills: Flat list of all matched skill name strings.
-    """
-    if not all_skills:
-        return
-
-    with st.expander("📋 Full Skill List (alphabetical)", expanded=False):
-        # Sort and display as a comma-separated list for easy scanning
-        sorted_skills = sorted(all_skills)
-        st.markdown(", ".join([f"`{s}`" for s in sorted_skills]))
 
 
 # ── File Info Banner ──────────────────────────────────────────────────────────
 
 def render_file_info(uploaded_file) -> None:
     """
-    Display a small info banner showing the uploaded file's metadata.
+    Display a success banner with the uploaded file's name, type, and size.
 
     Args:
         uploaded_file: The Streamlit uploaded file object.
@@ -256,67 +204,246 @@ def render_file_info(uploaded_file) -> None:
     )
 
 
-# ── Analysis Pipeline ─────────────────────────────────────────────────────────
+# ── Extracted Text Section ────────────────────────────────────────────────────
 
-def run_analysis(uploaded_file) -> None:
+def render_extracted_text(resume_text: str, file_name: str) -> None:
     """
-    Orchestrate the full analysis pipeline for a given uploaded file.
+    Display the extracted resume text in a collapsible expander.
 
-    Steps:
-      1. Display file info banner
-      2. Extract text from the file (with a loading spinner)
-      3. Render the extracted text in an expandable section
-      4. Extract skills from the text (with a loading spinner)
-      5. Render skill summary, skills by category, and flat skill list
-
-    All exceptions from the pipeline are caught here and shown to the
-    user as friendly error messages rather than raw tracebacks.
+    Lets the user verify the text was read correctly before trusting the score.
 
     Args:
-        uploaded_file: The Streamlit uploaded file object.
+        resume_text : Cleaned text from the resume.
+        file_name   : Original filename shown in the expander label.
     """
-    # ── Step 1: File info ──────────────────────────────────────────────────
-    render_file_info(uploaded_file)
-    logger.info("Processing uploaded file: %s", uploaded_file.name)
+    with st.expander(f"📄 Extracted Text from `{file_name}`", expanded=False):
+        col1, col2 = st.columns(2)
+        col1.metric("Characters", f"{len(resume_text):,}")
+        col2.metric("Words", f"{len(resume_text.split()):,}")
+        st.markdown("---")
+        st.text_area(
+            label="extracted_text",
+            value=resume_text,
+            height=300,
+            disabled=True,
+            label_visibility="collapsed",
+        )
 
-    # ── Step 2: Text extraction ────────────────────────────────────────────
-    resume_text = _extract_text_with_spinner(uploaded_file)
-    if resume_text is None:
-        return   # Error was already shown to the user; stop here
 
-    # ── Step 3: Show extracted text ────────────────────────────────────────
-    render_extracted_text(resume_text, uploaded_file.name)
+# ── ATS Score Display ─────────────────────────────────────────────────────────
 
-    # ── Step 4: Skill extraction ───────────────────────────────────────────
-    skill_results = _extract_skills_with_spinner(resume_text)
-    if skill_results is None:
-        return   # Error was already shown to the user; stop here
+def _get_score_color(score: int) -> str:
+    """
+    Return the hex colour associated with an ATS score band.
 
-    # ── Step 5: Display skill results ──────────────────────────────────────
-    render_skills_summary(skill_results)
+    Colour thresholds are read from SCORE_COLORS in config.py.
 
-    if skill_results["all_skills"]:
-        render_skills_by_category(skill_results["by_category"])
-        render_all_skills_flat(skill_results["all_skills"])
+    Args:
+        score: ATS score integer 0–100.
 
-    logger.info(
-        "Analysis complete for %s — %d skill(s) found",
-        uploaded_file.name,
-        len(skill_results["all_skills"]),
+    Returns:
+        Hex colour string, e.g. "#2ecc71".
+    """
+    if score >= 85:
+        return SCORE_COLORS["excellent"]
+    elif score >= 70:
+        return SCORE_COLORS["good"]
+    elif score >= 50:
+        return SCORE_COLORS["fair"]
+    else:
+        return SCORE_COLORS["poor"]
+
+
+def render_ats_score(ats_result: dict, job_role: str) -> None:
+    """
+    Render the full ATS analysis result section.
+
+    Displays in order:
+      1. Score headline (large coloured metric + grade badge)
+      2. Strengths
+      3. Missing skills
+      4. Suggestions
+      5. Per-category score breakdown
+
+    Args:
+        ats_result : Dictionary returned by calculate_ats_score().
+        job_role   : Selected job role name, shown in the section header.
+    """
+    score       = ats_result["ats_score"]
+    grade       = ats_result["grade"]
+    strengths   = ats_result["strengths"]
+    missing     = ats_result["missing_skills"]
+    suggestions = ats_result["suggestions"]
+    breakdown   = ats_result["breakdown"]
+    color       = _get_score_color(score)
+
+    st.markdown("---")
+    st.header(f"③ ATS Analysis — {job_role}")
+
+    # ── Score headline ─────────────────────────────────────────────────────
+    col_score, col_grade = st.columns([1, 2])
+
+    with col_score:
+        # Use HTML to render a large coloured score number
+        st.markdown(
+            f"<h1 style='color:{color}; margin:0;'>{score}<span style='font-size:1rem;'>/100</span></h1>",
+            unsafe_allow_html=True,
+        )
+        st.caption("ATS Score")
+
+    with col_grade:
+        st.markdown(
+            f"<h2 style='color:{color}; margin-top:0.4rem;'>{grade}</h2>",
+            unsafe_allow_html=True,
+        )
+        st.caption("Overall Grade")
+
+    st.markdown("")
+
+    # ── Strengths ──────────────────────────────────────────────────────────
+    st.subheader("✅ Strengths")
+    if strengths:
+        for strength in strengths:
+            st.markdown(f"- {strength}")
+    else:
+        st.info("No notable strengths detected. Review the suggestions below.")
+
+    # ── Missing Skills ─────────────────────────────────────────────────────
+    st.subheader("❌ Missing Required Skills")
+    if missing:
+        # Display as inline code badges for easy reading
+        badges = "  ".join([f"`{skill}`" for skill in missing])
+        st.markdown(badges)
+        st.caption(
+            f"{len(missing)} required skill(s) not found in your resume. "
+            "Add these to improve your score."
+        )
+    else:
+        st.success("All required skills for this role were detected in your resume.")
+
+    # ── Suggestions ────────────────────────────────────────────────────────
+    st.subheader("💡 Suggestions")
+    if suggestions:
+        for i, suggestion in enumerate(suggestions, start=1):
+            st.markdown(f"**{i}.** {suggestion}")
+    else:
+        st.success("Your resume looks well-optimised for this role. Great work!")
+
+    # ── Score Breakdown ────────────────────────────────────────────────────
+    st.subheader("📊 Score Breakdown")
+    st.caption("Individual score for each ATS category (0–100 before weighting).")
+
+    for category, cat_score in breakdown.items():
+        # Choose bar colour based on the sub-score value
+        if cat_score >= 80:
+            bar_color = SCORE_COLORS["excellent"]
+        elif cat_score >= 55:
+            bar_color = SCORE_COLORS["good"]
+        elif cat_score >= 35:
+            bar_color = SCORE_COLORS["fair"]
+        else:
+            bar_color = SCORE_COLORS["poor"]
+
+        col_label, col_bar = st.columns([1, 3])
+        col_label.markdown(f"**{category}**")
+
+        # Render a simple HTML progress-bar-style indicator
+        col_bar.markdown(
+            f"""
+            <div style="background:#e0e0e0; border-radius:6px; height:22px; width:100%;">
+              <div style="background:{bar_color}; width:{cat_score}%; border-radius:6px;
+                          height:22px; display:flex; align-items:center;
+                          padding-left:8px; color:white; font-size:0.8rem; font-weight:600;">
+                {cat_score}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.markdown("")   # spacing between rows
+
+
+# ── Skills Section ────────────────────────────────────────────────────────────
+
+def render_skills_summary(skill_results: dict) -> None:
+    """
+    Display total detected skills and a category-breakdown count.
+
+    Args:
+        skill_results: Dictionary from extract_skills() with keys
+                       "all_skills" and "by_category".
+    """
+    all_skills       = skill_results["all_skills"]
+    by_category      = skill_results["by_category"]
+    total_skills     = len(all_skills)
+    total_categories = len(by_category)
+
+    st.markdown("---")
+    st.header("🔍 Detected Skills")
+
+    col1, col2 = st.columns(2)
+    col1.metric(
+        label="Total Skills Detected",
+        value=total_skills,
+        help="Unique skills found in your resume matched against the skills database.",
+    )
+    col2.metric(
+        label="Skill Categories",
+        value=total_categories,
+        help="Number of distinct skill categories represented.",
     )
 
+    if total_skills == 0:
+        st.warning(
+            "⚠️ No skills were detected. "
+            "Make sure your resume has a clear Skills section with standard skill names."
+        )
+
+
+def render_skills_by_category(by_category: dict[str, list]) -> None:
+    """
+    Display detected skills grouped by category as inline code badges.
+
+    Args:
+        by_category: Dict mapping category name → list of skill names.
+    """
+    if not by_category:
+        return
+
+    st.subheader("Skills by Category")
+    for category in sorted(by_category.keys()):
+        skills_in_category = by_category[category]
+        badges = "  ".join([f"`{skill}`" for skill in sorted(skills_in_category)])
+        st.markdown(f"**{category}** ({len(skills_in_category)})")
+        st.markdown(badges)
+        st.markdown("")
+
+
+def render_all_skills_flat(all_skills: list[str]) -> None:
+    """
+    Display all detected skills as a flat alphabetical list in an expander.
+
+    Args:
+        all_skills: Flat list of matched skill name strings.
+    """
+    if not all_skills:
+        return
+
+    with st.expander("📋 Full Skill List (alphabetical)", expanded=False):
+        st.markdown(", ".join([f"`{s}`" for s in sorted(all_skills)]))
+
+
+# ── Pipeline Helpers ──────────────────────────────────────────────────────────
 
 def _extract_text_with_spinner(uploaded_file) -> str | None:
     """
-    Run extract_text() inside a Streamlit spinner and handle errors.
-
-    Separating spinner logic from render logic keeps run_analysis() clean.
+    Run extract_text() with a spinner; return text or None on failure.
 
     Args:
-        uploaded_file: The Streamlit uploaded file object.
+        uploaded_file: Streamlit uploaded file object.
 
     Returns:
-        Extracted text string on success, or None if extraction failed.
+        Extracted text string, or None if an error occurred.
     """
     try:
         with st.spinner("Extracting text from your resume…"):
@@ -324,19 +451,16 @@ def _extract_text_with_spinner(uploaded_file) -> str | None:
         return resume_text
 
     except ValueError as e:
-        # ValueError = file validation failure (wrong type, too large)
         st.error(f"❌ Invalid file: {e}")
         logger.warning("File validation failed for %s: %s", uploaded_file.name, str(e))
         return None
 
     except RuntimeError as e:
-        # RuntimeError = extraction failure (corrupted PDF, empty file, etc.)
         st.error(f"❌ Could not extract text: {e}")
         logger.error("Text extraction failed for %s: %s", uploaded_file.name, str(e))
         return None
 
     except Exception as e:
-        # Catch-all for unexpected errors — show a generic message
         st.error("❌ An unexpected error occurred while reading your file.")
         logger.exception("Unexpected error during text extraction: %s", str(e))
         return None
@@ -344,13 +468,13 @@ def _extract_text_with_spinner(uploaded_file) -> str | None:
 
 def _extract_skills_with_spinner(resume_text: str) -> dict | None:
     """
-    Run extract_skills() inside a Streamlit spinner and handle errors.
+    Run extract_skills() with a spinner; return results or None on failure.
 
     Args:
         resume_text: Cleaned resume text string.
 
     Returns:
-        Skill results dictionary on success, or None if extraction failed.
+        Skill results dictionary, or None if an error occurred.
     """
     try:
         with st.spinner("Detecting skills using NLP…"):
@@ -358,7 +482,6 @@ def _extract_skills_with_spinner(resume_text: str) -> dict | None:
         return skill_results
 
     except RuntimeError as e:
-        # RuntimeError from skill_extractor = spaCy model not loaded, CSV missing, etc.
         st.error(f"❌ Skill extraction failed: {e}")
         logger.error("Skill extraction failed: %s", str(e))
         return None
@@ -369,37 +492,140 @@ def _extract_skills_with_spinner(resume_text: str) -> dict | None:
         return None
 
 
+def _calculate_ats_with_spinner(
+    resume_text: str,
+    all_skills: list[str],
+    job_role: str,
+) -> dict | None:
+    """
+    Run calculate_ats_score() with a spinner; return results or None on failure.
+
+    Args:
+        resume_text : Cleaned resume text.
+        all_skills  : Flat list of detected skill names.
+        job_role    : Selected job role string.
+
+    Returns:
+        ATS result dictionary, or None if an error occurred.
+    """
+    try:
+        with st.spinner(f"Calculating ATS score for {job_role}…"):
+            ats_result = calculate_ats_score(resume_text, all_skills, job_role)
+        return ats_result
+
+    except ValueError as e:
+        st.error(f"❌ Invalid job role: {e}")
+        logger.error("ATS scoring failed — invalid role '%s': %s", job_role, str(e))
+        return None
+
+    except Exception as e:
+        st.error("❌ An unexpected error occurred during ATS scoring.")
+        logger.exception("Unexpected error during ATS scoring: %s", str(e))
+        return None
+
+
+# ── Full Analysis Pipeline ────────────────────────────────────────────────────
+
+def run_analysis(uploaded_file, job_role: str) -> None:
+    """
+    Orchestrate the complete analysis pipeline.
+
+    Steps:
+      1. Show file info banner
+      2. Extract text from the uploaded file
+      3. Display extracted text (collapsible)
+      4. Extract skills from the text
+      5. Calculate ATS score
+      6. Display ATS results (score, grade, strengths, missing, suggestions, breakdown)
+      7. Display skill summary and category breakdown
+
+    Each step that can fail returns None and shows a user-friendly error,
+    stopping the pipeline cleanly without a traceback.
+
+    Args:
+        uploaded_file : Streamlit uploaded file object.
+        job_role      : Selected job role name string.
+    """
+    render_file_info(uploaded_file)
+    logger.info("Starting analysis — file: %s | role: %s", uploaded_file.name, job_role)
+
+    # Step 1 — Extract text
+    resume_text = _extract_text_with_spinner(uploaded_file)
+    if resume_text is None:
+        return
+
+    # Step 2 — Show extracted text
+    render_extracted_text(resume_text, uploaded_file.name)
+
+    # Step 3 — Extract skills
+    skill_results = _extract_skills_with_spinner(resume_text)
+    if skill_results is None:
+        return
+
+    all_skills = get_all_skills(resume_text)
+
+    # Step 4 — Calculate ATS score
+    ats_result = _calculate_ats_with_spinner(resume_text, all_skills, job_role)
+    if ats_result is None:
+        return
+
+    # Step 5 — Render ATS results
+    render_ats_score(ats_result, job_role)
+
+    # Step 6 — Render skill results
+    render_skills_summary(skill_results)
+    if skill_results["all_skills"]:
+        render_skills_by_category(skill_results["by_category"])
+        render_all_skills_flat(skill_results["all_skills"])
+
+    logger.info(
+        "Analysis complete — %s | role: %s | score: %d | skills: %d",
+        uploaded_file.name,
+        job_role,
+        ats_result["ats_score"],
+        len(all_skills),
+    )
+
+
 # ── App Entry Point ───────────────────────────────────────────────────────────
 
 def main() -> None:
     """
-    Main function — sets up the page and drives the full app flow.
+    Main function — configures the page and drives the full app flow.
 
-    Streamlit re-runs this entire function from top to bottom every time
-    the user interacts with the app (uploads a file, clicks a button, etc.).
-    That is normal Streamlit behaviour — state is managed via st.session_state
-    if needed in future phases.
+    Streamlit re-runs this function on every user interaction.
+    The job roles list is cached via @st.cache_data to avoid re-reading
+    the JSON file on every re-run.
     """
     configure_page()
     render_sidebar()
 
-    # Page title visible in the main content area
     st.title(f"{APP_ICON} {APP_TITLE}")
     st.markdown("---")
 
-    # Render the upload widget and get the file (or None)
+    # Load job roles (cached after first load)
+    try:
+        job_roles = load_job_roles()
+    except RuntimeError as e:
+        st.error(f"❌ Could not load job roles: {e}")
+        logger.error("Failed to load job roles: %s", str(e))
+        st.stop()   # Nothing else in the app can work without job roles
+
+    # Role selector always visible
+    selected_role = render_job_role_selector(job_roles)
+
+    st.markdown("")
+
+    # File uploader
     uploaded_file = render_upload_section()
 
-    # Only run the analysis pipeline once a file has been uploaded
     if uploaded_file is not None:
         st.markdown("---")
-        run_analysis(uploaded_file)
+        run_analysis(uploaded_file, selected_role)
     else:
-        # Show a friendly prompt when no file is uploaded yet
         st.markdown("")
-        st.info("👆 Upload a resume above to get started.")
+        st.info("👆 Upload your resume above to get started.")
 
 
-# Standard Python entry point guard
 if __name__ == "__main__":
     main()

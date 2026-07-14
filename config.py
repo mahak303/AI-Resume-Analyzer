@@ -48,6 +48,19 @@ ATS_WEIGHTS = {
 }
 
 
+# ATS Scoring Weights ───────────────────────────────────────────────────────
+# Each category contributes a percentage to the final ATS score (must sum to 100)
+ 
+ATS_WEIGHTS = {
+    "skills_match":         0.40,   # Required + preferred skills found in resume
+    "section_completeness": 0.20,   # Education, Experience, Projects, Skills present
+    "contact_info":         0.15,   # Email, phone, LinkedIn detected
+    "keyword_density":      0.10,   # Job-role keywords present in text
+    "resume_length":        0.10,   # Word count within acceptable range
+    "quantified_impact":    0.05,   # Numbers, percentages, measurable results
+}
+
+
 # ── Resume Section Keywords ───────────────────────────────────────────────────
 # Used by the parser to detect and label resume sections
 
@@ -74,7 +87,7 @@ SCORE_BANDS = {
     "excellent": 85,   # 85–100 → Excellent
     "good":      70,   # 70–84  → Good
     "fair":      50,   # 50–69  → Fair
-    "poor":       0,   # 0–49   → Needs Work
+    "Needs Work": 0,   # 0–49   → Needs Work
 }
 
 SCORE_COLORS = {
