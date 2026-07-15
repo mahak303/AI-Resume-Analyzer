@@ -1,5 +1,5 @@
 """
-─────────────
+
 ATS (Applicant Tracking System) scoring engine for the AI Resume Analyzer.
 
 What is an ATS score?
@@ -51,6 +51,7 @@ from config import (
     MAX_MISSING_SKILLS_SHOWN,
     MAX_SUGGESTIONS_SHOWN,
 )
+from src.suggestions import build_role_suggestions
 
 # ── Logger ────────────────────────────────────────────────────────────────────
 logger = logging.getLogger(__name__)
@@ -489,89 +490,6 @@ def _build_strengths(
     return strengths
 
 
-# ── Suggestions Builder ───────────────────────────────────────────────────────
-
-def _build_suggestions(
-    missing_required  : list[str],
-    found_sections    : list[str],
-    found_contact     : list[str],
-    length_message    : str,
-    keyword_count     : int,
-    quantify_count    : int,
-    total_role_keywords: int,
-) -> list[str]:
-    """
-    Build a prioritised list of actionable improvement suggestions.
-
-    Suggestions are ordered from highest impact (missing required skills)
-    to lower impact (style/formatting improvements).
-
-    The list is capped at MAX_SUGGESTIONS_SHOWN from config.py to avoid
-    overwhelming the user.
-
-    Args:
-        missing_required    : Required skills not found in the resume.
-        found_sections      : Resume sections that were detected.
-        found_contact       : Contact info types detected.
-        length_message      : Length assessment string.
-        keyword_count       : Job keywords matched.
-        quantify_count      : Quantified achievements found.
-        total_role_keywords : Total keywords defined for the role.
-
-    Returns:
-        Prioritised list of suggestion strings (capped at MAX_SUGGESTIONS_SHOWN).
-    """
-    suggestions: list[str] = []
-
-    # 1. Missing required skills — highest priority
-    if missing_required:
-        preview = missing_required[:5]
-        skills_str = ", ".join(preview)
-        suffix = f" (and {len(missing_required) - 5} more)" if len(missing_required) > 5 else ""
-        suggestions.append(
-            f"Add these missing required skills to your resume: {skills_str}{suffix}."
-        )
-
-    # 2. Missing sections
-    expected_sections = {"Experience", "Education", "Skills", "Projects"}
-    for section in expected_sections:
-        if section not in found_sections:
-            suggestions.append(
-                f"Add a '{section}' section — ATS systems specifically look for this."
-            )
-
-    # 3. Missing contact information
-    if "Email" not in found_contact:
-        suggestions.append("Add a professional email address to your resume.")
-
-    if "Phone" not in found_contact:
-        suggestions.append("Add a phone number to your contact information.")
-
-    if "LinkedIn" not in found_contact:
-        suggestions.append(
-            "Add your LinkedIn profile URL (linkedin.com/in/yourname)."
-        )
-
-    # 4. Resume length
-    if "Too short" in length_message or "Too long" in length_message or "Long" in length_message:
-        suggestions.append(length_message)
-
-    # 5. Low keyword density
-    if total_role_keywords > 0 and keyword_count < (total_role_keywords * 0.4):
-        suggestions.append(
-            "Use more role-specific keywords from the job description "
-            "to improve ATS keyword matching."
-        )
-
-    # 6. No quantified achievements
-    if quantify_count == 0:
-        suggestions.append(
-            "Add measurable achievements to your bullet points "
-            "(e.g. 'Improved performance by 30%', 'Built a system serving 500+ users')."
-        )
-
-    # Return only the top N suggestions to avoid overwhelming the user
-    return suggestions[:MAX_SUGGESTIONS_SHOWN]
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -679,14 +597,16 @@ def calculate_ats_score(
         quantify_count    = quantify_count,
     )
 
-    suggestions = _build_suggestions(
+    suggestions = build_role_suggestions(
+        job_role             = job_role,
         missing_required     = missing_required,
+        missing_preferred    = missing_preferred,
         found_sections       = found_sections,
         found_contact        = found_contact,
         length_message       = length_message,
         keyword_count        = keyword_count,
-        quantify_count       = quantify_count,
         total_role_keywords  = len(role_keywords),
+        quantify_count       = quantify_count,
     )
 
     # Cap missing_skills list so the UI is not overwhelmed

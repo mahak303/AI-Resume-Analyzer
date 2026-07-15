@@ -29,7 +29,7 @@ JOB_ROLES_JSON_PATH = os.path.join(DATA_DIR, "job_roles.json")
 # ── File Upload Settings ──────────────────────────────────────────────────────
 
 # Maximum allowed resume file size (in megabytes)
-MAX_FILE_SIZE_MB = 5
+MAX_FILE_SIZE_MB = 10
 
 # Supported file types for resume upload
 ALLOWED_FILE_TYPES = ["pdf", "docx"]

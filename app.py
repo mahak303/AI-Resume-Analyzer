@@ -1,5 +1,4 @@
 """
-
 Main entry point for the AI Resume Analyzer Streamlit application.
 
 Phase 4 Part 2 — integrates the ATS scoring engine.
@@ -32,9 +31,10 @@ from config import (
     SCORE_COLORS,
     SIDEBAR_STATE,
 )
-from src.ats_score import calculate_ats_score
+from src.ats_engine import calculate_ats_score
 from src.pdf_parser import extract_text, get_file_info
 from src.skill_extractor import extract_skills, get_all_skills
+from src.suggestions import get_learning_steps
 
 # ── Logging Configuration ─────────────────────────────────────────────────────
 # Configured once here at the entry point; all src/ modules inherit this.
@@ -477,6 +477,56 @@ def render_ats_score(ats_result: dict, job_role: str) -> None:
         st.markdown("")   # spacing between rows
 
 
+# ── Learning Steps Section ────────────────────────────────────────────────────
+
+def render_learning_steps(job_role: str) -> None:
+    """
+    Render the "Recommended Next Learning Steps" section.
+
+    Displays role-specific guidance across three categories:
+      - Technologies to learn next
+      - Certifications worth pursuing
+      - Project ideas to build and add to a portfolio
+
+    This section is shown unconditionally — it guides growth regardless
+    of the current resume score.
+
+    Args:
+        job_role: Selected job role name string.
+    """
+    steps = get_learning_steps(job_role)
+
+    technologies   = steps.get("technologies", [])
+    certifications = steps.get("certifications", [])
+    project_ideas  = steps.get("project_ideas", [])
+
+    st.markdown("---")
+    st.header("📚 Recommended Next Learning Steps")
+    st.caption(
+        f"Personalised roadmap for the **{job_role}** role. "
+        "These are independent of your current score — use them to plan your growth."
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.subheader("🛠️ Technologies")
+        for tech in technologies:
+            st.markdown(f"- `{tech}`")
+
+    with col2:
+        st.subheader("🏅 Certifications")
+        for cert in certifications:
+            st.markdown(f"- {cert}")
+
+    with col3:
+        st.subheader("💡 Project Ideas")
+        for idea in project_ideas:
+            st.markdown(f"- {idea}")
+
+    logger.debug("Rendered learning steps for role: %s", job_role)
+
+
 # ── Skills Section ────────────────────────────────────────────────────────────
 
 def render_skills_summary(skill_results: dict) -> None:
@@ -651,7 +701,9 @@ def run_analysis(uploaded_file, job_role: str) -> None:
       4. Extract skills from the text
       5. Calculate ATS score
       6. Display ATS results (score, grade, strengths, missing, suggestions, breakdown)
-      7. Display skill summary and category breakdown
+      7. Display job role match % and preferred skills analysis
+      8. Display recommended learning steps
+      9. Display skill summary and category breakdown
 
     Each step that can fail returns None and shows a user-friendly error,
     stopping the pipeline cleanly without a traceback.
@@ -689,7 +741,10 @@ def run_analysis(uploaded_file, job_role: str) -> None:
     # Step 6 — Render job role match + preferred skills
     render_job_match_section(ats_result, job_role)
 
-    # Step 7 — Render skill results
+    # Step 7 — Render learning steps
+    render_learning_steps(job_role)
+
+    # Step 8 — Render skill results
     render_skills_summary(skill_results)
     if skill_results["all_skills"]:
         render_skills_by_category(skill_results["by_category"])
