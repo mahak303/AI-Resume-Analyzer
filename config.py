@@ -1,13 +1,4 @@
-"""
-─────────
-Central configuration for AI Resume Analyzer.
-All constants, weights, thresholds, and file paths live here.
-Import this module anywhere you need a setting — never hardcode values.
 
-Stack: Python, Streamlit, spaCy (basic tokenization + lemmatization only).
-spaCy is used only for text preprocessing before skill matching.
-Skill matching itself is done against skills.csv using string comparison.
-"""
 
 import os
 

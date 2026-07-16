@@ -4,7 +4,7 @@ Generates intelligent, role-specific improvement suggestions and personalised
 learning steps for the AI Resume Analyzer.
 
 Why this module exists:
-  The generic suggestions in ats_scorer.py (_build_suggestions) only look at
+  The generic suggestions in ats_engine.py (_build_suggestions) only look at
   structural issues — missing sections, contact info, length, keywords.
   They say nothing about WHAT to learn or HOW to improve for a specific role.
 
