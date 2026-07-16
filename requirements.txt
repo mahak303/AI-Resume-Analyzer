@@ -21,6 +21,30 @@ pandas==2.2.2               # Skills CSV loading and manipulation
 # ── Testing ──────────────────────────────────────────────────────────────────
 pytest==8.2.0               # Test runner
 
+# ── Core Streamlit App ───────────────────────────────────────────────────────
+streamlit==1.35.0
+
+# ── Resume File Parsing ──────────────────────────────────────────────────────
+pdfplumber==0.11.0          # PDF text extraction (handles complex layouts)
+python-docx==1.1.2          # DOCX file reading
+
+# ── NLP & Text Processing ────────────────────────────────────────────────────
+spacy==3.7.4                # Tokenization and lemmatization for skill matching
+
+# ── Analysis & Scoring ───────────────────────────────────────────────────────
+scikit-learn==1.4.2         # TF-IDF vectorizer, cosine similarity
+numpy==1.26.4               # Numerical operations
+
+# ── Visualization ────────────────────────────────────────────────────────────
+plotly==5.22.0              # Interactive charts and gauges
+
+# ── Data Handling ────────────────────────────────────────────────────────────
+pandas==2.2.2               # Skills CSV loading and manipulation
+
+# ── Testing ──────────────────────────────────────────────────────────────────
+pytest==8.2.0               # Test runner
+
+# ────────────────────────────────────────────────────────────────────────────
 # ────────────────────────────────────────────────────────────────────────────
 # SETUP INSTRUCTIONS
 # Step 1 — Install all dependencies:
@@ -28,4 +52,5 @@ pytest==8.2.0               # Test runner
 #
 # Step 2 — Download the spaCy English language model:
 #     python -m spacy download en_core_web_sm
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 # ────────────────────────────────────────────────────────────────────────────
